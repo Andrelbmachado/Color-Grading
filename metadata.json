@@ -1,0 +1,6 @@
+{
+  "name": "Color Grading",
+  "description": "Ferramenta visual minimalista para criação imediata de paletas de cores cromáticas e harmonias.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
