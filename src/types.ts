@@ -7,7 +7,9 @@ export type HarmonyType =
   | 'triangular'
   | 'quadratic';
 
-export type WheelShape = 'circle' | 'triangle' | 'square';
+export type WheelShape = 'circle' | 'triangle' | 'square' | 'matrix2d';
+
+export type VisionMode = 'normal' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
 
 export interface RGB {
   r: number;

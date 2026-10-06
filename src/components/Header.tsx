@@ -1,251 +1,167 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { HarmonyType } from '../types';
+import { ColorItem, HarmonyType } from '../types';
 import {
-  Shuffle,
-  Bookmark,
-  Share2,
+  Download,
   ChevronDown,
   Sun,
   Moon,
-  FolderHeart,
+  FileSpreadsheet,
+  FileCode,
+  FileText,
+  Image as ImageIcon,
+  FileJson,
   Check,
 } from 'lucide-react';
 
 interface HeaderProps {
+  colors: ColorItem[];
   harmony: HarmonyType;
-  onSelectHarmony: (harmony: HarmonyType) => void;
-  onRandomize: () => void;
-  onSave: () => void;
-  onExport: () => void;
-  onOpenSavedModal: () => void;
+  paletteName: string;
   darkMode: boolean;
   onToggleDarkMode: () => void;
+  onExportPng: () => void;
+  onExportSvg: () => void;
+  onExportCsv: () => void;
+  onExportCss: () => void;
+  onExportPdf: () => void;
+  onExportJson: () => void;
 }
 
-const renderHarmonySvg = (id: HarmonyType) => {
-  switch (id) {
-    case 'triangular':
-      return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <polygon points="12,4 4,18 20,18" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-          <circle cx="12" cy="4" r="2" fill="currentColor" />
-          <circle cx="4" cy="18" r="2" fill="currentColor" />
-          <circle cx="20" cy="18" r="2" fill="currentColor" />
-        </svg>
-      );
-    case 'quadratic':
-      return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <rect x="5" y="5" width="14" height="14" rx="1" stroke="currentColor" strokeWidth="2" />
-          <circle cx="5" cy="5" r="2" fill="currentColor" />
-          <circle cx="19" cy="5" r="2" fill="currentColor" />
-          <circle cx="19" cy="19" r="2" fill="currentColor" />
-          <circle cx="5" cy="19" r="2" fill="currentColor" />
-        </svg>
-      );
-    case 'splitComplementary':
-      return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <line x1="12" y1="12" x2="12" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <line x1="12" y1="12" x2="6" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <line x1="12" y1="12" x2="18" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="12" cy="20" r="2" fill="currentColor" />
-          <circle cx="6" cy="6" r="2" fill="currentColor" />
-          <circle cx="18" cy="6" r="2" fill="currentColor" />
-        </svg>
-      );
-    case 'complementary':
-      return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="12" cy="4" r="2" fill="currentColor" />
-          <circle cx="12" cy="20" r="2" fill="currentColor" />
-        </svg>
-      );
-    case 'analogous':
-      return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <path d="M5 16 A 10 10 0 0 1 19 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="5" cy="16" r="2" fill="currentColor" />
-          <circle cx="12" cy="6" r="2" fill="currentColor" />
-          <circle cx="19" cy="16" r="2" fill="currentColor" />
-        </svg>
-      );
-    case 'monochromatic':
-      return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="6" cy="12" r="1.8" fill="currentColor" />
-          <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-          <circle cx="18" cy="12" r="1.8" fill="currentColor" />
-        </svg>
-      );
-    case 'free':
-    default:
-      return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-          <circle cx="6" cy="8" r="1.8" fill="currentColor" />
-          <circle cx="18" cy="7" r="1.8" fill="currentColor" />
-          <circle cx="7" cy="17" r="1.8" fill="currentColor" />
-          <circle cx="17" cy="16" r="1.8" fill="currentColor" />
-        </svg>
-      );
-  }
-};
-
-const HARMONY_OPTIONS: { id: HarmonyType; label: string }[] = [
-  { id: 'triangular', label: 'Triangular' },
-  { id: 'quadratic', label: 'Quadratic (Quadrado)' },
-  { id: 'splitComplementary', label: 'Dividida (Y linha)' },
-  { id: 'complementary', label: 'Complementar' },
-  { id: 'analogous', label: 'Análogo' },
-  { id: 'monochromatic', label: 'Monocromático' },
-  { id: 'free', label: 'Personalizado / Livre' },
-];
-
 export const Header: React.FC<HeaderProps> = ({
-  harmony,
-  onSelectHarmony,
-  onRandomize,
-  onSave,
-  onExport,
-  onOpenSavedModal,
   darkMode,
   onToggleDarkMode,
+  onExportPng,
+  onExportSvg,
+  onExportCsv,
+  onExportCss,
+  onExportPdf,
+  onExportJson,
 }) => {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [lastExported, setLastExported] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
+        setExportOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const currentOption = HARMONY_OPTIONS.find(o => o.id === harmony) || HARMONY_OPTIONS[0];
+  const handleExport = (type: string, action: () => void) => {
+    action();
+    setLastExported(type);
+    setTimeout(() => {
+      setLastExported(null);
+      setExportOpen(false);
+    }, 700);
+  };
 
   return (
-    <header className="w-full bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-2xs">
-      {/* Zone 1: Logo & Brand Wordmark */}
+    <header className="w-full bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xs">
+      {/* Brand Wordmark & Tri-Color Circles */}
       <div className="flex items-center gap-3">
-        <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
-          <span className="absolute -top-0.5 left-0.5 w-4 h-4 rounded-full bg-[#00E5FF] mix-blend-multiply dark:mix-blend-screen opacity-90" />
-          <span className="absolute -top-0.5 right-0.5 w-4 h-4 rounded-full bg-[#FFDE00] mix-blend-multiply dark:mix-blend-screen opacity-90" />
-          <span className="absolute bottom-0 w-4.5 h-4.5 rounded-full bg-[#FF4F81] mix-blend-multiply dark:mix-blend-screen opacity-90" />
+        <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
+          <span className="absolute -top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-[#00E5FF] mix-blend-multiply dark:mix-blend-screen opacity-90" />
+          <span className="absolute -top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-[#FFDE00] mix-blend-multiply dark:mix-blend-screen opacity-90" />
+          <span className="absolute bottom-0 w-4 h-4 rounded-full bg-[#FF4F81] mix-blend-multiply dark:mix-blend-screen opacity-90" />
         </div>
-        <span className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+        <span className="text-lg font-bold tracking-tight text-neutral-900 dark:text-white">
           Color Grading
         </span>
       </div>
 
-      {/* Zone 2: Harmony Dropdown matching image.png */}
-      <div className="relative" ref={dropdownRef}>
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:inline text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-            Harmony
-          </span>
+      {/* Right Controls: High-Contrast Export Dropdown + Sun/Moon Switch */}
+      <div className="flex items-center gap-3">
+        {/* Export Dropdown with high contrast colors */}
+        <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2 py-1.5 px-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:hover:bg-neutral-750 text-xs font-semibold text-neutral-800 dark:text-neutral-200 transition-colors shadow-2xs"
+            onClick={() => setExportOpen(!exportOpen)}
+            className="flex items-center gap-2 py-2 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-bold transition-all shadow-sm active:scale-95"
           >
-            {renderHarmonySvg(harmony)}
-            <span>{currentOption.label.split(' ')[0]}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+            <Download className="w-3.5 h-3.5" />
+            <span>Exportar</span>
+            <ChevronDown className="w-3.5 h-3.5 opacity-80" />
           </button>
+
+          {/* High-Contrast Dropdown Menu */}
+          {exportOpen && (
+            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-300 dark:border-neutral-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-4 py-1.5 border-b border-neutral-200 dark:border-neutral-800">
+                <span className="text-[10px] font-extrabold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider">
+                  Escolha o Formato
+                </span>
+              </div>
+
+              {[
+                { id: 'png', label: 'Imagem PNG', desc: '1200x630 com códigos e nomes', icon: ImageIcon, fn: onExportPng },
+                { id: 'svg', label: 'Vetor SVG', desc: 'Vetor escalável para Figma/Design', icon: FileText, fn: onExportSvg },
+                { id: 'pdf', label: 'Documento PDF', desc: 'Ficha da paleta para impressão', icon: FileText, fn: onExportPdf },
+                { id: 'csv', label: 'Planilha CSV', desc: 'HEX, RGB, CMYK, HSL e nomes', icon: FileSpreadsheet, fn: onExportCsv },
+                { id: 'css', label: 'Variáveis CSS', desc: ':root { --color-1: ... }', icon: FileCode, fn: onExportCss },
+                { id: 'json', label: 'Arquivo JSON', desc: 'Tokens de design estruturados', icon: FileJson, fn: onExportJson },
+              ].map(opt => {
+                const Icon = opt.icon;
+                const isExported = lastExported === opt.id;
+
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => handleExport(opt.id, opt.fn)}
+                    className="w-full px-4 py-2.5 text-left text-xs flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors border-b border-neutral-100 dark:border-neutral-800/50 last:border-b-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700">
+                        <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-neutral-900 dark:text-neutral-50 text-xs">
+                          {opt.label}
+                        </div>
+                        <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                          {opt.desc}
+                        </div>
+                      </div>
+                    </div>
+                    {isExported && <Check className="w-4 h-4 text-emerald-500 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {dropdownOpen && (
-          <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-56 bg-white dark:bg-neutral-850 rounded-2xl shadow-xl border border-neutral-200/90 dark:border-neutral-700/90 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-            {HARMONY_OPTIONS.map(opt => {
-              const selected = opt.id === harmony;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => {
-                    onSelectHarmony(opt.id);
-                    setDropdownOpen(false);
-                  }}
-                  className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center justify-between transition-colors ${
-                    selected
-                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 font-semibold'
-                      : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {renderHarmonySvg(opt.id)}
-                    <span>{opt.label}</span>
-                  </div>
-                  {selected && <Check className="w-3.5 h-3.5 text-blue-500" />}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Zone 3: Actions + Theme Toggle */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        {/* Randomize */}
+        {/* Sun & Moon Switch Toggle */}
         <button
-          onClick={onRandomize}
-          className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-xs font-semibold text-neutral-700 dark:text-neutral-200 transition-colors shadow-2xs"
-          title="Gerar nova paleta aleatória"
-        >
-          <Shuffle className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Randomize</span>
-        </button>
-
-        {/* Save */}
-        <button
-          onClick={onSave}
-          className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-xs font-semibold text-neutral-700 dark:text-neutral-200 transition-colors shadow-2xs"
-          title="Salvar esta paleta"
-        >
-          <Bookmark className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Save</span>
-        </button>
-
-        {/* Saved Library */}
-        <button
-          onClick={onOpenSavedModal}
-          className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-200 transition-colors shadow-2xs"
-          title="Minhas Paletas Salvas"
-        >
-          <FolderHeart className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Export */}
-        <button
-          onClick={onExport}
-          className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-semibold transition-colors shadow-2xs"
-          title="Exportar paleta"
-        >
-          <Share2 className="w-3.5 h-3.5" />
-          <span>Export</span>
-        </button>
-
-        {/* Explicit Light / Dark mode button */}
-        <button
+          role="switch"
+          aria-checked={darkMode}
           onClick={onToggleDarkMode}
-          className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100 text-xs font-semibold transition-all shadow-2xs"
           title={darkMode ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
+          className={`relative w-16 h-8 rounded-full p-1 transition-colors flex items-center cursor-pointer border ${
+            darkMode
+              ? 'bg-neutral-800 border-neutral-700'
+              : 'bg-neutral-200 border-neutral-300'
+          }`}
         >
-          {darkMode ? (
-            <>
-              <Sun className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline text-[11px]">Claro</span>
-            </>
-          ) : (
-            <>
-              <Moon className="w-3.5 h-3.5 text-neutral-700" />
-              <span className="hidden sm:inline text-[11px]">Escuro</span>
-            </>
-          )}
+          <div className="w-full flex items-center justify-between px-1.5 text-neutral-500 select-none">
+            <Sun className={`w-3.5 h-3.5 transition-opacity ${darkMode ? 'opacity-30' : 'text-amber-500 opacity-90'}`} />
+            <Moon className={`w-3.5 h-3.5 transition-opacity ${darkMode ? 'text-blue-400 opacity-90' : 'opacity-30'}`} />
+          </div>
+
+          <div
+            className={`absolute top-1 w-6 h-6 rounded-full bg-white dark:bg-neutral-900 shadow-md flex items-center justify-center transition-transform duration-200 ease-out border border-black/10 dark:border-white/10 ${
+              darkMode ? 'translate-x-8' : 'translate-x-0'
+            }`}
+          >
+            {darkMode ? (
+              <Moon className="w-3.5 h-3.5 text-blue-400" />
+            ) : (
+              <Sun className="w-3.5 h-3.5 text-amber-500" />
+            )}
+          </div>
         </button>
       </div>
     </header>
