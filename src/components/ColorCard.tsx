@@ -4,6 +4,7 @@ import {
   parseHexInput,
   rgbToHex,
   cmykToRgb,
+  hslToRgb,
   createColorItem,
   createColorFromHsl,
   getContrastRatio,
