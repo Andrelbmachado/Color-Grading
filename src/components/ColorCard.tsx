@@ -4,7 +4,6 @@ import {
   parseHexInput,
   rgbToHex,
   cmykToRgb,
-  hslToRgb,
   createColorItem,
   createColorFromHsl,
   getContrastRatio,
@@ -18,6 +17,55 @@ interface ColorCardProps {
   visionMode?: VisionMode;
   onSelect: () => void;
   onUpdate: (updated: ColorItem) => void;
+}
+
+interface NumericSpecProps {
+  label: string;
+  value: string;
+  max: number;
+  disabled?: boolean;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  onChange: (value: string) => void;
+  onSlide: (value: string) => void;
+  onStep: (delta: number) => void;
+  onSelect: () => void;
+}
+
+function NumericSpec({ label, value, max, disabled, inputRef, onChange, onSlide, onStep, onSelect }: NumericSpecProps) {
+  return (
+    <div className="numeric-spec">
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        aria-label={label}
+        value={value}
+        placeholder={label.split(' ').pop()}
+        disabled={disabled}
+        onFocus={onSelect}
+        onChange={event => onChange(event.target.value)}
+        onKeyDown={event => {
+          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            onStep(event.key === 'ArrowUp' ? 1 : -1);
+          }
+        }}
+        className="spec-input"
+      />
+      <input
+        type="range"
+        aria-label={`Slider ${label}`}
+        min={0}
+        max={max}
+        step={1}
+        value={Number(value) || 0}
+        disabled={disabled}
+        onFocus={onSelect}
+        onChange={event => onSlide(event.target.value)}
+        className="spec-slider"
+      />
+    </div>
+  );
 }
 
 export const ColorCard: React.FC<ColorCardProps> = ({
@@ -131,9 +179,7 @@ export const ColorCard: React.FC<ColorCardProps> = ({
     const clampedH = ((h % 360) + 360) % 360;
     const clampedS = Math.max(0, Math.min(100, s));
     const clampedL = Math.max(0, Math.min(100, l));
-    const rgb = hslToRgb({ h: clampedH, s: clampedS, l: clampedL });
-    const hex = rgbToHex(rgb);
-    onUpdate(createColorItem(color.id, hex, false));
+    onUpdate(createColorFromHsl(color.id, { h: clampedH, s: clampedS, l: clampedL }, false));
   };
 
   // Field change handlers with auto advance
@@ -287,24 +333,24 @@ export const ColorCard: React.FC<ColorCardProps> = ({
   return (
     <div
       onClick={onSelect}
-      className={`group relative rounded-xl px-2.5 py-2 transition-all cursor-pointer select-none ${
+      className={`color-card group relative rounded-xl p-3 transition-all cursor-pointer select-none ${
         isActive
           ? 'border-2 border-blue-500 ring-2 ring-blue-500/20 shadow-xs bg-blue-500/2 dark:bg-blue-500/5'
           : 'border border-neutral-200/90 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 bg-white dark:bg-neutral-900/60'
       }`}
     >
       {/* 1. TOP HEADER ROW: Swatch + Names (Left) and CONTRAST METRICS AT THE TOP (Right) */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {/* Swatch (compact 26x26) */}
           <div className="relative shrink-0">
             {!color.isEmpty ? (
               <div
-                className="w-6.5 h-6.5 rounded-md shadow-2xs border border-black/10 dark:border-white/10 transition-transform group-hover:scale-105"
+                className="w-8 h-8 rounded-md shadow-2xs border border-black/10 dark:border-white/10 transition-transform group-hover:scale-105"
                 style={{ backgroundColor: color.hex, ...visionFilterStyle }}
               />
             ) : (
-              <div className="w-6.5 h-6.5 rounded-md border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-400 group-hover:text-blue-500 group-hover:border-blue-400 transition-colors bg-neutral-50 dark:bg-neutral-800/40">
+              <div className="w-8 h-8 rounded-md border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-400 group-hover:text-blue-500 group-hover:border-blue-400 transition-colors bg-neutral-50 dark:bg-neutral-800/40">
                 <Plus className="w-3 h-3" />
               </div>
             )}
@@ -315,7 +361,7 @@ export const ColorCard: React.FC<ColorCardProps> = ({
             <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
               Color {labelNumber}
             </span>
-            <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 truncate max-w-[130px] sm:max-w-[170px]">
+            <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 truncate max-w-[210px]">
               {!color.isEmpty ? `· ${color.name}` : '· Vazio'}
             </span>
           </div>
@@ -325,7 +371,7 @@ export const ColorCard: React.FC<ColorCardProps> = ({
         {!color.isEmpty ? (
           <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
             {/* vs White */}
-            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-[9.5px]">
+            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-[11px]">
               <span className="w-2 h-2 rounded-full bg-white border border-neutral-300 dark:border-neutral-500 shrink-0" />
               <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">{contrastWhite}:1</span>
               <span className={`text-[7.5px] font-extrabold px-1 py-0.2 rounded leading-tight ${
@@ -336,7 +382,7 @@ export const ColorCard: React.FC<ColorCardProps> = ({
             </div>
 
             {/* vs Black */}
-            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-[9.5px]">
+            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-[11px]">
               <span className="w-2 h-2 rounded-full bg-black border border-neutral-600 dark:border-neutral-400 shrink-0" />
               <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">{contrastBlack}:1</span>
               <span className={`text-[7.5px] font-extrabold px-1 py-0.2 rounded leading-tight ${
@@ -368,7 +414,7 @@ export const ColorCard: React.FC<ColorCardProps> = ({
           </div>
 
           {/* Dark-to-Light Degrade Strip */}
-          <div className="flex items-center gap-0.5 h-1.5 rounded-xs overflow-hidden w-full bg-neutral-200 dark:bg-neutral-800 p-0.2 border border-black/10 dark:border-white/10">
+          <div className="flex items-center gap-0.5 h-2 rounded-sm overflow-hidden w-full bg-neutral-200 dark:bg-neutral-800 p-0.2 border border-black/10 dark:border-white/10">
             {tonalScale.map(item => (
               <div
                 key={item.stop}
@@ -385,177 +431,109 @@ export const ColorCard: React.FC<ColorCardProps> = ({
         </div>
       )}
 
-      {/* 3. COMPACT CONTROLS: HEX, RGB, CMYK, HSL (High Contrast Grid) */}
-      <div className="grid grid-cols-12 gap-1.5 mt-1" onClick={e => e.stopPropagation()}>
-        {/* HEX (col-span-2) */}
-        <div className="col-span-2 flex flex-col">
-          <span className="text-[9px] font-extrabold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider mb-0.5 leading-none">
-            HEX
-          </span>
+      {/* Existing numeric specifications keep typing and gain mouse sliders. */}
+      <div className="color-specs" onClick={event => event.stopPropagation()}>
+        <div className="spec-group">
+          <label htmlFor={`hex-${color.id}`} className="spec-label">HEX</label>
           <input
-            type="text"
-            value={hexInput}
-            onChange={handleHexChange}
-            onBlur={handleHexBlur}
-            disabled={color.isEmpty}
-            placeholder="#------"
-            className="w-full h-6 text-[10px] font-mono font-extrabold py-0 px-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 transition-colors uppercase disabled:opacity-40 text-center"
+            id={`hex-${color.id}`} type="text" value={hexInput}
+            onFocus={onSelect} onChange={handleHexChange} onBlur={handleHexBlur}
+            disabled={color.isEmpty} placeholder="#------"
+            className="spec-input uppercase"
           />
         </div>
-
-        {/* RGB (col-span-3) */}
-        <div className="col-span-3 flex flex-col">
-          <span className="text-[9px] font-extrabold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider mb-0.5 leading-none">
-            RGB
-          </span>
-          <div className="flex items-center gap-0.5">
-            <input
-              ref={rRef}
-              type="text"
-              value={rVal}
-              placeholder="R"
-              disabled={color.isEmpty}
-              onChange={e => handleRgbFieldChange('r', e.target.value, gRef)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepRgb('r', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepRgb('r', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+        <div className="spec-group">
+          <span className="spec-label">RGB</span>
+          <div className="spec-channels">
+            <NumericSpec
+              label={`Cor ${labelNumber} RGB R`}
+              value={rVal} max={255} disabled={color.isEmpty} inputRef={rRef}
+              onSelect={onSelect}
+              onChange={value => handleRgbFieldChange('r', value, gRef)}
+              onSlide={value => handleRgbFieldChange('r', value)}
+              onStep={delta => stepRgb('r', delta)}
             />
-            <input
-              ref={gRef}
-              type="text"
-              value={gVal}
-              placeholder="G"
-              disabled={color.isEmpty}
-              onChange={e => handleRgbFieldChange('g', e.target.value, bRef)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepRgb('g', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepRgb('g', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+            <NumericSpec
+              label={`Cor ${labelNumber} RGB G`}
+              value={gVal} max={255} disabled={color.isEmpty} inputRef={gRef}
+              onSelect={onSelect}
+              onChange={value => handleRgbFieldChange('g', value, bRef)}
+              onSlide={value => handleRgbFieldChange('g', value)}
+              onStep={delta => stepRgb('g', delta)}
             />
-            <input
-              ref={bRef}
-              type="text"
-              value={bVal}
-              placeholder="B"
-              disabled={color.isEmpty}
-              onChange={e => handleRgbFieldChange('b', e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepRgb('b', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepRgb('b', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+            <NumericSpec
+              label={`Cor ${labelNumber} RGB B`}
+              value={bVal} max={255} disabled={color.isEmpty} inputRef={bRef}
+              onSelect={onSelect}
+              onChange={value => handleRgbFieldChange('b', value)}
+              onSlide={value => handleRgbFieldChange('b', value)}
+              onStep={delta => stepRgb('b', delta)}
             />
           </div>
         </div>
-
-        {/* CMYK (col-span-4) - Given extra span for 4 boxes */}
-        <div className="col-span-4 flex flex-col">
-          <span className="text-[9px] font-extrabold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider mb-0.5 leading-none">
-            CMYK
-          </span>
-          <div className="flex items-center gap-0.5">
-            <input
-              ref={cRef}
-              type="text"
-              value={cVal}
-              placeholder="C"
-              disabled={color.isEmpty}
-              onChange={e => handleCmykFieldChange('c', e.target.value, mRef)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepCmyk('c', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepCmyk('c', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+        <div className="spec-group">
+          <span className="spec-label">CMYK</span>
+          <div className="spec-channels">
+            <NumericSpec
+              label={`Cor ${labelNumber} CMYK C`}
+              value={cVal} max={100} disabled={color.isEmpty} inputRef={cRef}
+              onSelect={onSelect}
+              onChange={value => handleCmykFieldChange('c', value, mRef)}
+              onSlide={value => handleCmykFieldChange('c', value)}
+              onStep={delta => stepCmyk('c', delta)}
             />
-            <input
-              ref={mRef}
-              type="text"
-              value={mVal}
-              placeholder="M"
-              disabled={color.isEmpty}
-              onChange={e => handleCmykFieldChange('m', e.target.value, yRef)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepCmyk('m', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepCmyk('m', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+            <NumericSpec
+              label={`Cor ${labelNumber} CMYK M`}
+              value={mVal} max={100} disabled={color.isEmpty} inputRef={mRef}
+              onSelect={onSelect}
+              onChange={value => handleCmykFieldChange('m', value, yRef)}
+              onSlide={value => handleCmykFieldChange('m', value)}
+              onStep={delta => stepCmyk('m', delta)}
             />
-            <input
-              ref={yRef}
-              type="text"
-              value={yVal}
-              placeholder="Y"
-              disabled={color.isEmpty}
-              onChange={e => handleCmykFieldChange('y', e.target.value, kRef)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepCmyk('y', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepCmyk('y', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+            <NumericSpec
+              label={`Cor ${labelNumber} CMYK Y`}
+              value={yVal} max={100} disabled={color.isEmpty} inputRef={yRef}
+              onSelect={onSelect}
+              onChange={value => handleCmykFieldChange('y', value, kRef)}
+              onSlide={value => handleCmykFieldChange('y', value)}
+              onStep={delta => stepCmyk('y', delta)}
             />
-            <input
-              ref={kRef}
-              type="text"
-              value={kVal}
-              placeholder="K"
-              disabled={color.isEmpty}
-              onChange={e => handleCmykFieldChange('k', e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepCmyk('k', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepCmyk('k', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+            <NumericSpec
+              label={`Cor ${labelNumber} CMYK K`}
+              value={kVal} max={100} disabled={color.isEmpty} inputRef={kRef}
+              onSelect={onSelect}
+              onChange={value => handleCmykFieldChange('k', value)}
+              onSlide={value => handleCmykFieldChange('k', value)}
+              onStep={delta => stepCmyk('k', delta)}
             />
           </div>
         </div>
-
-        {/* HSL (col-span-3) */}
-        <div className="col-span-3 flex flex-col">
-          <span className="text-[9px] font-extrabold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider mb-0.5 leading-none">
-            HSL
-          </span>
-          <div className="flex items-center gap-0.5">
-            <input
-              ref={hRef}
-              type="text"
-              value={hVal}
-              placeholder="H"
-              disabled={color.isEmpty}
-              onChange={e => handleHslFieldChange('h', e.target.value, sRef)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepHsl('h', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepHsl('h', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+        <div className="spec-group">
+          <span className="spec-label">HSL</span>
+          <div className="spec-channels">
+            <NumericSpec
+              label={`Cor ${labelNumber} HSL H`}
+              value={hVal} max={360} disabled={color.isEmpty} inputRef={hRef}
+              onSelect={onSelect}
+              onChange={value => handleHslFieldChange('h', value, sRef)}
+              onSlide={value => handleHslFieldChange('h', value)}
+              onStep={delta => stepHsl('h', delta)}
             />
-            <input
-              ref={sRef}
-              type="text"
-              value={sVal}
-              placeholder="S"
-              disabled={color.isEmpty}
-              onChange={e => handleHslFieldChange('s', e.target.value, lRef)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepHsl('s', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepHsl('s', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+            <NumericSpec
+              label={`Cor ${labelNumber} HSL S`}
+              value={sVal} max={100} disabled={color.isEmpty} inputRef={sRef}
+              onSelect={onSelect}
+              onChange={value => handleHslFieldChange('s', value, lRef)}
+              onSlide={value => handleHslFieldChange('s', value)}
+              onStep={delta => stepHsl('s', delta)}
             />
-            <input
-              ref={lRef}
-              type="text"
-              value={lVal}
-              placeholder="L"
-              disabled={color.isEmpty}
-              onChange={e => handleHslFieldChange('l', e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); stepHsl('l', 1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); stepHsl('l', -1); }
-              }}
-              className="w-full h-6 text-[9.5px] font-mono font-bold py-0 px-0.5 text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+            <NumericSpec
+              label={`Cor ${labelNumber} HSL L`}
+              value={lVal} max={100} disabled={color.isEmpty} inputRef={lRef}
+              onSelect={onSelect}
+              onChange={value => handleHslFieldChange('l', value)}
+              onSlide={value => handleHslFieldChange('l', value)}
+              onStep={delta => stepHsl('l', delta)}
             />
           </div>
         </div>

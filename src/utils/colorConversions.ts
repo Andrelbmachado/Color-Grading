@@ -281,6 +281,7 @@ export function createColorFromHsl(id: number, hsl: HSL, locked = false): ColorI
   const rgb = hslToRgb(hsl);
   const hex = rgbToHex(rgb);
   const hsv = rgbToHsv(rgb);
+  hsv.h = hsl.h;
   const cmyk = rgbToCmyk(rgb);
   const name = getColorName(hex);
 
@@ -382,145 +383,45 @@ export function generateHarmonicColors(
   harmony: HarmonyType,
   currentColors: ColorItem[]
 ): ColorItem[] {
-  const baseHsv = baseColor.hsv;
-  const count = 5;
-  const result: ColorItem[] = [];
-
-  const mod360 = (h: number) => ((h % 360) + 360) % 360;
-
-  for (let i = 0; i < count; i++) {
-    const existing = currentColors[i];
-    if (existing && existing.locked && existing.id !== baseColor.id) {
-      result.push(existing);
-      continue;
-    }
-    if (existing && existing.id === baseColor.id) {
-      result.push({ ...baseColor, isEmpty: false });
-      continue;
-    }
-
-    let h = baseHsv.h;
-    let s = baseHsv.s;
-    let v = baseHsv.v;
-    let isEmpty = false;
-
-    switch (harmony) {
-      case 'monochromatic': {
-        const satSteps = [100, 75, 55, 35, 20];
-        const valSteps = [100, 85, 70, 50, 30];
-        s = Math.max(15, Math.min(100, Math.round(baseHsv.s * (satSteps[i] / 100))));
-        v = Math.max(0, Math.min(100, Math.round(baseHsv.v * (valSteps[i] / 100))));
-        break;
-      }
-      case 'analogous': {
-        // Equal spacing around the base hue
-        const offsets = [-60, -30, 0, 30, 60];
-        h = mod360(baseHsv.h + offsets[i]);
-        s = baseHsv.s;
-        v = baseHsv.v;
-        break;
-      }
-      case 'complementary': {
-        // Strict straight opposite diameter
-        if (i === 0) {
-          h = baseHsv.h;
-        } else if (i === 1) {
-          h = mod360(baseHsv.h + 180);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else if (i === 2) {
-          h = baseHsv.h;
-          s = Math.max(15, baseHsv.s - 35);
-          v = Math.min(100, baseHsv.v + 10);
-        } else if (i === 3) {
-          h = mod360(baseHsv.h + 180);
-          s = Math.max(15, baseHsv.s - 30);
-          v = Math.min(100, baseHsv.v + 10);
-        } else {
-          isEmpty = existing?.isEmpty ?? true;
-        }
-        break;
-      }
-      case 'splitComplementary': {
-        // Exact Y-shape: Base, Base + 150°, Base + 210° with matching saturation
-        if (i === 0) {
-          h = baseHsv.h;
-        } else if (i === 1) {
-          h = mod360(baseHsv.h + 150);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else if (i === 2) {
-          h = mod360(baseHsv.h + 210);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else if (i === 3) {
-          h = mod360(baseHsv.h + 150);
-          s = Math.max(15, baseHsv.s - 35);
-        } else {
-          isEmpty = existing?.isEmpty ?? true;
-        }
-        break;
-      }
-      case 'triangular': {
-        // Exact Equilateral Triangle: 0°, 120°, 240° with identical saturation/distance
-        if (i === 0) {
-          h = baseHsv.h;
-        } else if (i === 1) {
-          h = mod360(baseHsv.h + 120);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else if (i === 2) {
-          h = mod360(baseHsv.h + 240);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else if (i === 3) {
-          h = mod360(baseHsv.h + 120);
-          s = Math.max(20, baseHsv.s - 30);
-          v = Math.min(100, baseHsv.v + 15);
-        } else {
-          isEmpty = existing?.isEmpty ?? true;
-        }
-        break;
-      }
-      case 'quadratic': {
-        // Exact Square: 0°, 90°, 180°, 270° with identical saturation/distance
-        if (i === 0) {
-          h = baseHsv.h;
-        } else if (i === 1) {
-          h = mod360(baseHsv.h + 90);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else if (i === 2) {
-          h = mod360(baseHsv.h + 180);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else if (i === 3) {
-          h = mod360(baseHsv.h + 270);
-          s = baseHsv.s;
-          v = baseHsv.v;
-        } else {
-          isEmpty = existing?.isEmpty ?? true;
-        }
-        break;
-      }
-      case 'free':
-      default:
-        if (existing) {
-          result.push(existing);
-          continue;
-        }
-        break;
-    }
-
-    const item = createColorFromHsv(i + 1, { h, s, v }, existing?.locked ?? false);
-    if (isEmpty) {
-      item.isEmpty = true;
-      item.hex = '#------';
-    }
-    result.push(item);
+  if (harmony === 'free') {
+    return currentColors.map(color => color.id === baseColor.id ? baseColor : color);
   }
 
-  return result;
+  const offsets: Record<Exclude<HarmonyType, 'free'>, number[]> = {
+    analogous: [-60, -30, 0, 30, 60],
+    complementary: [0, 180],
+    splitComplementary: [0, 150, 210],
+    triangular: [0, 120, 240],
+    quadratic: [0, 90, 180, 270],
+    monochromatic: [0],
+  };
+  const angles = offsets[harmony];
+  const anchorIndex = Math.max(0, currentColors.findIndex(color => color.id === baseColor.id));
+  const rootHue = baseColor.hsv.h - angles[anchorIndex % angles.length];
+  const count = Math.max(5, currentColors.length);
+  const clamp = (value: number) => Math.max(0, Math.min(100, value));
+
+  return Array.from({ length: count }, (_, index) => {
+    const existing = currentColors[index];
+    const id = existing?.id ?? index + 1;
+    if (id === baseColor.id) return { ...baseColor, isEmpty: false };
+    if (existing?.locked) return existing;
+
+    const isCore = harmony === 'monochromatic' || index < angles.length;
+    if (!isCore && (existing?.isEmpty ?? true)) {
+      return existing ?? { ...createColorItem(id, '#CCCCCC'), isEmpty: true, hex: '#------' };
+    }
+
+    const hue = ((rootHue + angles[index % angles.length]) % 360 + 360) % 360;
+    const monochromatic = harmony === 'monochromatic';
+    const saturation = monochromatic
+      ? clamp(baseColor.hsv.s * [1, .75, .55, .35, .2][index % 5])
+      : isCore ? baseColor.hsv.s : clamp(baseColor.hsv.s - 30);
+    const value = monochromatic
+      ? clamp(baseColor.hsv.v * [1, .85, .7, .5, .3][index % 5])
+      : isCore ? baseColor.hsv.v : clamp(baseColor.hsv.v + 15);
+    return createColorFromHsv(id, { h: hue, s: saturation, v: value }, false);
+  });
 }
 
 export function extractPaletteFromImageFile(

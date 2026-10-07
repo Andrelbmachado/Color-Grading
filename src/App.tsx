@@ -29,7 +29,7 @@ import { Plus, Eye } from 'lucide-react';
 
 export default function App() {
   // 5 cards initially (4 active + 1 empty card ready for selection):
-  const [colors, setColors] = useState<ColorItem[]>([
+  const [colors, setColors] = useState<ColorItem[]>(() => generateHarmonicColors(createColorItem(1, '#00E5FF'), 'triangular', [
     createColorItem(1, '#00E5FF'),
     createColorItem(2, '#FF6B6B'),
     createColorItem(3, '#5B2DFF'),
@@ -39,7 +39,7 @@ export default function App() {
       isEmpty: true,
       hex: '#------',
     },
-  ]);
+  ]));
 
   const [activeId, setActiveId] = useState<number>(1);
   const [harmony, setHarmony] = useState<HarmonyType>('triangular');
@@ -50,7 +50,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Dark mode
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState<boolean>(true);
 
   // Modal
   const [isFullPreviewOpen, setIsFullPreviewOpen] = useState(false);
@@ -215,10 +215,10 @@ export default function App() {
         </div>
 
         {/* Central Workspace Card: Color Wheel on left & Scrollable Color Cards on right with generous spacing */}
-        <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-5 sm:p-7 lg:p-8 shadow-[0_2px_16px_rgba(0,0,0,0.02)]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-14 items-start">
+        <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-6 lg:p-7 shadow-[0_2px_16px_rgba(0,0,0,0.02)]">
+          <div className="studio-grid">
             {/* Left Column: Interactive Color Wheel positioned snugly higher up */}
-            <div className="lg:col-span-5 xl:col-span-5 flex flex-col items-center justify-start">
+            <div className="wheel-column">
               <ColorWheel
                 colors={colors}
                 activeId={activeId}
@@ -235,8 +235,8 @@ export default function App() {
             </div>
 
             {/* Right Column: Dynamic Color Cards with Vertical Scroll for infinite colors */}
-            <div className="lg:col-span-7 xl:col-span-7 flex flex-col">
-              <div className="max-h-[580px] overflow-y-auto pr-1 flex flex-col gap-2 custom-scrollbar scroll-smooth">
+            <div className="color-column">
+              <div className="color-list custom-scrollbar">
                 {colors.map((color, index) => (
                   <ColorCard
                     key={color.id}

@@ -61,26 +61,26 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="w-full bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xs">
+    <header className="w-full bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-3 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xs">
       {/* Brand Wordmark & Tri-Color Circles */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
           <span className="absolute -top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-[#00E5FF] mix-blend-multiply dark:mix-blend-screen opacity-90" />
           <span className="absolute -top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-[#FFDE00] mix-blend-multiply dark:mix-blend-screen opacity-90" />
           <span className="absolute bottom-0 w-4 h-4 rounded-full bg-[#FF4F81] mix-blend-multiply dark:mix-blend-screen opacity-90" />
         </div>
-        <span className="text-lg font-bold tracking-tight text-neutral-900 dark:text-white">
+        <span className="text-base sm:text-lg font-bold tracking-tight text-neutral-900 dark:text-white">
           Color Grading
         </span>
       </div>
 
       {/* Right Controls: High-Contrast Export Dropdown + Sun/Moon Switch */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Export Dropdown with high contrast colors */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setExportOpen(!exportOpen)}
-            className="flex items-center gap-2 py-2 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-bold transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 sm:gap-2 py-2 px-3 sm:px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-bold transition-all shadow-sm active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Exportar</span>
@@ -89,7 +89,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* High-Contrast Dropdown Menu */}
           {exportOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-300 dark:border-neutral-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute -right-[72px] sm:right-0 mt-2 w-64 bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-300 dark:border-neutral-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-4 py-1.5 border-b border-neutral-200 dark:border-neutral-800">
                 <span className="text-[10px] font-extrabold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider">
                   Escolha o Formato
@@ -113,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleExport(opt.id, opt.fn)}
                     className="w-full px-4 py-2.5 text-left text-xs flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors border-b border-neutral-100 dark:border-neutral-800/50 last:border-b-0"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700">
                         <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>

@@ -4,7 +4,6 @@ import {
   Circle,
   Square,
   Triangle,
-  Grid,
   UploadCloud,
 } from 'lucide-react';
 import {
@@ -14,6 +13,8 @@ import {
   rgbToHex,
   extractPaletteFromImageFile,
 } from '../utils/colorConversions';
+
+import { harmonyPath } from '../utils/harmonyGeometry';
 
 interface ColorWheelProps {
   colors: ColorItem[];
@@ -29,7 +30,7 @@ interface ColorWheelProps {
   onImageDropped: (colors: ColorItem[]) => void;
 }
 
-type DragTarget = 'ring' | 'triangle' | 'square' | 'matrix' | 'huebar' | 'circle' | null;
+type DragTarget = 'ring' | 'triangle' | 'square' | 'circle' | null;
 
 export const ColorWheel: React.FC<ColorWheelProps> = ({
   colors,
@@ -91,20 +92,6 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
     x1: cx + sqHalf,
     y0: cy - sqHalf,
     y1: cy + sqHalf,
-  };
-
-  // Matrix 2D dimensions
-  const matBounds = {
-    x0: 16,
-    x1: 296,
-    y0: 16,
-    y1: 344,
-  };
-  const barBounds = {
-    x0: 316,
-    x1: 344,
-    y0: 16,
-    y1: 344,
   };
 
   // --------------------------------------------------------------------------
@@ -251,48 +238,6 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
       ctx.lineWidth = 1.5;
       ctx.strokeRect(sqBounds.x0, sqBounds.y0, sqW, sqH);
       ctx.restore();
-    } else if (wheelShape === 'matrix2d') {
-      // 1. Draw Main 2D Box (Saturation X, Value Y)
-      ctx.save();
-      const mW = matBounds.x1 - matBounds.x0;
-      const mH = matBounds.y1 - matBounds.y0;
-
-      // Horizontal White to Pure Hue
-      const hGrad = ctx.createLinearGradient(matBounds.x0, 0, matBounds.x1, 0);
-      hGrad.addColorStop(0, '#FFFFFF');
-      hGrad.addColorStop(1, pureHueHex);
-      ctx.fillStyle = hGrad;
-      ctx.fillRect(matBounds.x0, matBounds.y0, mW, mH);
-
-      // Vertical Transparent to Black
-      const vGrad = ctx.createLinearGradient(0, matBounds.y0, 0, matBounds.y1);
-      vGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      vGrad.addColorStop(1, 'rgba(0,0,0,1)');
-      ctx.fillStyle = vGrad;
-      ctx.fillRect(matBounds.x0, matBounds.y0, mW, mH);
-
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(matBounds.x0, matBounds.y0, mW, mH);
-
-      // 2. Draw Vertical Hue Spectrum Bar
-      const bW = barBounds.x1 - barBounds.x0;
-      const bH = barBounds.y1 - barBounds.y0;
-      const hueGrad = ctx.createLinearGradient(0, barBounds.y0, 0, barBounds.y1);
-      hueGrad.addColorStop(0, '#ff0000');
-      hueGrad.addColorStop(1 / 6, '#ffff00');
-      hueGrad.addColorStop(2 / 6, '#00ff00');
-      hueGrad.addColorStop(3 / 6, '#00ffff');
-      hueGrad.addColorStop(4 / 6, '#0000ff');
-      hueGrad.addColorStop(5 / 6, '#ff00ff');
-      hueGrad.addColorStop(1, '#ff0000');
-
-      ctx.fillStyle = hueGrad;
-      ctx.fillRect(barBounds.x0, barBounds.y0, bW, bH);
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.strokeRect(barBounds.x0, barBounds.y0, bW, bH);
-
-      ctx.restore();
     } else {
       // Classical Radial Chromatic Disc
       ctx.save();
@@ -321,7 +266,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
       ctx.stroke();
       ctx.restore();
     }
-  }, [wheelShape, size, radius, activeHsl.h, rOut, rIn, rTri, sqBounds, matBounds, barBounds]);
+  }, [wheelShape, size, radius, activeHsl.h, rOut, rIn, rTri, sqBounds]);
 
   // --------------------------------------------------------------------------
   // Coordinate Conversions for Markers and Cursors
@@ -364,19 +309,6 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
     };
   };
 
-  // Convert (S, V) to 2D Matrix coordinate
-  const hsvToMatrixCoord = (s: number, v: number) => {
-    const sNorm = Math.max(0, Math.min(1, s / 100));
-    const vNorm = Math.max(0, Math.min(1, v / 100));
-    const mW = matBounds.x1 - matBounds.x0;
-    const mH = matBounds.y1 - matBounds.y0;
-
-    return {
-      x: matBounds.x0 + sNorm * mW,
-      y: matBounds.y0 + (1 - vNorm) * mH,
-    };
-  };
-
   // Radial disc coordinates
   const hsvToRadialCoord = (hsv: HSV) => {
     const angleRad = (hsv.h * Math.PI) / 180;
@@ -395,8 +327,8 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const px = clientX - rect.left;
-    const py = clientY - rect.top;
+    const px = (clientX - rect.left) * size / rect.width;
+    const py = (clientY - rect.top) * size / rect.height;
     const dx = px - cx;
     const dy = py - cy;
     const dist = Math.hypot(dx, dy);
@@ -481,19 +413,6 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
 
         onColorChange(createColorFromHsv(activeId, { h: activeHsv.h, s: newS, v: newV }, false));
       }
-    } else if (wheelShape === 'matrix2d') {
-      if (target === 'huebar') {
-        const bH = barBounds.y1 - barBounds.y0;
-        const normY = Math.max(0, Math.min(1, (py - barBounds.y0) / bH));
-        const newHue = Math.round(normY * 360);
-        onColorChange(createColorFromHsv(activeId, { ...activeHsv, h: newHue }, false));
-      } else if (target === 'matrix') {
-        const mW = matBounds.x1 - matBounds.x0;
-        const mH = matBounds.y1 - matBounds.y0;
-        const newS = Math.round(Math.max(0, Math.min(100, ((px - matBounds.x0) / mW) * 100)));
-        const newV = Math.round(Math.max(0, Math.min(100, (1 - (py - matBounds.y0) / mH) * 100)));
-        onColorChange(createColorFromHsv(activeId, { h: activeHsv.h, s: newS, v: newV }, false));
-      }
     } else {
       // Classical radial wheel
       let angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
@@ -517,8 +436,8 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
+    const px = (e.clientX - rect.left) * size / rect.width;
+    const py = (e.clientY - rect.top) * size / rect.height;
     const dx = px - cx;
     const dy = py - cy;
     const dist = Math.hypot(dx, dy);
@@ -530,15 +449,12 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
     } else if (wheelShape === 'square') {
       if (dist >= rIn - 10) determinedTarget = 'ring';
       else determinedTarget = 'square';
-    } else if (wheelShape === 'matrix2d') {
-      if (px >= 304) determinedTarget = 'huebar';
-      else determinedTarget = 'matrix';
     } else {
       determinedTarget = 'circle';
     }
 
     setDragTarget(determinedTarget);
-    updateFromPointer(e.clientX, e.clientY, determinedTarget);
+    if (cardId === undefined) updateFromPointer(e.clientX, e.clientY, determinedTarget);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLElement | SVGElement>) => {
@@ -624,34 +540,33 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
   // Active cursor coordinates
   const activeTriCoord = hsvToTriCoord(activeHsv.s, activeHsv.v);
   const activeSqCoord = hsvToSquareCoord(activeHsv.s, activeHsv.v);
-  const activeMatCoord = hsvToMatrixCoord(activeHsv.s, activeHsv.v);
   const activeRadialCoord = hsvToRadialCoord(activeHsv);
-  const activeBarY = barBounds.y0 + (activeHsl.h / 360) * (barBounds.y1 - barBounds.y0);
+
 
   const visionFilterStyle =
     visionMode && visionMode !== 'normal' ? { filter: `url(#${visionMode}-filter)` } : undefined;
 
   return (
-    <div className="flex flex-col items-center select-none w-full max-w-[390px]">
-      {/* 1. Format Switcher Buttons: Círculo Radial (FIRST & DEFAULT), Triângulo, Quadrado, Matriz 2D */}
-      <div className="w-full grid grid-cols-4 gap-2 mb-3.5 px-0.5">
+    <div className="flex flex-col items-center select-none w-full max-w-[440px]">
+      {/* Format choices; the radial circle remains the initial selection. */}
+      <div className="w-full grid grid-cols-3 gap-3 mb-4 px-0.5">
         {[
-          { id: 'circle', label: 'Círculo', icon: Circle },
           { id: 'triangle', label: 'Triângulo', icon: Triangle },
           { id: 'square', label: 'Quadrado', icon: Square },
-          { id: 'matrix2d', label: 'Matriz 2D', icon: Grid },
+          { id: 'circle', label: 'Círculo', icon: Circle },
         ].map(item => {
           const Icon = item.icon;
           const isSelected = wheelShape === item.id;
           return (
             <button
               key={item.id}
+              aria-pressed={isSelected}
               onClick={() => onWheelShapeChange(item.id as WheelShape)}
               title={`Formato: ${item.label}`}
               className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
                 isSelected
                   ? 'bg-blue-600 text-white border-2 border-blue-700 shadow-sm dark:bg-blue-600 dark:border-blue-400 font-extrabold'
-                  : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-950 border-2 border-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-750 dark:text-white dark:border-neutral-700'
+                  : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-950 border-2 border-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-white dark:border-neutral-700'
               }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
@@ -673,13 +588,14 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className={`relative w-[360px] h-[360px] rounded-3xl overflow-hidden cursor-crosshair transition-all ${
+        onPointerCancel={handlePointerUp}
+        className={`relative w-full aspect-square touch-none rounded-3xl overflow-hidden cursor-crosshair transition-all ${
           dragOverWheel ? 'ring-4 ring-blue-500 ring-offset-2' : ''
         }`}
         style={visionFilterStyle}
       >
         {/* HTML5 Canvas with physical color dispersion */}
-        <canvas ref={canvasRef} className="absolute inset-0 w-[360px] h-[360px] pointer-events-none" />
+        <canvas ref={canvasRef} className="absolute inset-0 w-full aspect-square pointer-events-none" />
 
         {/* Drag over overlay for image drops */}
         {dragOverWheel && (
@@ -691,7 +607,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
 
         {/* Interactive SVG Overlay with Markers and Geometric Shapes */}
         <svg
-          className="absolute inset-0 w-[360px] h-[360px] pointer-events-none"
+          className="absolute inset-0 w-full aspect-square pointer-events-none"
           viewBox={`0 0 ${size} ${size}`}
         >
           {/* A) In Triangle and Square mode: Draw Ring Markers and Harmony Points */}
@@ -700,13 +616,8 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
               {/* Harmony lines/connections on the outer ring */}
               {harmony !== 'free' && (
                 <path
-                  d={colors
-                    .filter(c => !c.isEmpty)
-                    .map((c, i) => {
-                      const { x, y } = hueToRingCoord(c.hsv.h);
-                      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                    })
-                    .join(' ') + (colors.filter(c => !c.isEmpty).length > 2 ? ' Z' : '')}
+                  data-harmony={harmony}
+                  d={harmonyPath(harmony, colors, color => hueToRingCoord(color.hsv.h), { x: cx, y: cy }, true)}
                   fill="none"
                   stroke="rgba(255,255,255,0.7)"
                   strokeWidth="2"
@@ -785,50 +696,13 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
             </>
           )}
 
-          {/* B) In Matrix 2D Mode: Cursor in box + Pointer arrows on Hue bar */}
-          {wheelShape === 'matrix2d' && (
-            <>
-              {/* Cursor inside 2D Matrix */}
-              <circle
-                cx={activeMatCoord.x}
-                cy={activeMatCoord.y}
-                r={7}
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth="2.5"
-                className="filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] pointer-events-none"
-              />
-
-              {/* Arrow pointers on vertical Hue bar (Image 3 style: triangular pointer ticks) */}
-              <polygon
-                points={`${barBounds.x0 - 6},${activeBarY} ${barBounds.x0 - 1},${activeBarY - 4} ${barBounds.x0 - 1},${activeBarY + 4}`}
-                fill="#2563EB"
-                stroke="#FFFFFF"
-                strokeWidth="1"
-                className="filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
-              />
-              <polygon
-                points={`${barBounds.x1 + 6},${activeBarY} ${barBounds.x1 + 1},${activeBarY - 4} ${barBounds.x1 + 1},${activeBarY + 4}`}
-                fill="#2563EB"
-                stroke="#FFFFFF"
-                strokeWidth="1"
-                className="filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
-              />
-            </>
-          )}
-
           {/* C) In Circle Radial Mode: Classic radial markers with harmony links */}
           {wheelShape === 'circle' && (
             <>
               {harmony !== 'free' && (
                 <path
-                  d={colors
-                    .filter(c => !c.isEmpty)
-                    .map((c, i) => {
-                      const { x, y } = hsvToRadialCoord(c.hsv);
-                      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                    })
-                    .join(' ') + (colors.filter(c => !c.isEmpty).length > 2 ? ' Z' : '')}
+                  data-harmony={harmony}
+                  d={harmonyPath(harmony, colors, color => hsvToRadialCoord(color.hsv), { x: cx, y: cy })}
                   fill="none"
                   stroke="rgba(255,255,255,0.8)"
                   strokeWidth="2"
@@ -890,6 +764,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
               type="range"
               min="0"
               max="360"
+              aria-label="Slider Matiz H"
               value={activeHsl.h}
               onChange={e => commitHslChange(Number(e.target.value), activeHsl.s, activeHsl.l)}
               style={{
@@ -903,6 +778,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           <div className="relative flex items-center">
             <input
               type="text"
+              aria-label="Matiz H"
               value={hInput}
               onChange={e => handleHInputChange(e.target.value)}
               onKeyDown={e => {
@@ -923,6 +799,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
               type="range"
               min="0"
               max="100"
+              aria-label="Slider Saturação S"
               value={activeHsl.s}
               onChange={e => commitHslChange(activeHsl.h, Number(e.target.value), activeHsl.l)}
               style={{
@@ -935,6 +812,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           <div className="relative flex items-center">
             <input
               type="text"
+              aria-label="Saturação S"
               value={sInput}
               onChange={e => handleSInputChange(e.target.value)}
               onKeyDown={e => {
@@ -955,6 +833,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
               type="range"
               min="0"
               max="100"
+              aria-label="Slider Luminosidade L"
               value={activeHsl.l}
               onChange={e => commitHslChange(activeHsl.h, activeHsl.s, Number(e.target.value))}
               style={{
@@ -967,6 +846,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           <div className="relative flex items-center">
             <input
               type="text"
+              aria-label="Luminosidade L"
               value={lInput}
               onChange={e => handleLInputChange(e.target.value)}
               onKeyDown={e => {
@@ -982,7 +862,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
 
       {/* 4. Harmony Mode Selection Buttons */}
       <div className="w-full mt-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-        <div className="grid grid-cols-7 gap-1">
+        <div className="harmony-buttons">
           {[
             {
               id: 'free',
@@ -1076,16 +956,17 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
             return (
               <button
                 key={item.id}
+                aria-pressed={isSelected}
                 onClick={() => onHarmonyChange(item.id as HarmonyType)}
                 title={item.label}
-                className={`py-1.5 px-0.5 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                className={`py-2 px-1 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
                   isSelected
                     ? 'border-blue-600 bg-blue-600 text-white font-extrabold shadow-sm dark:border-blue-400'
-                    : 'border-neutral-300 bg-neutral-100 hover:bg-neutral-200 text-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-750 font-bold'
+                    : 'border-neutral-300 bg-neutral-100 hover:bg-neutral-200 text-neutral-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 font-bold'
                 }`}
               >
                 {item.svg}
-                <span className="text-[8.5px] truncate max-w-full font-bold leading-none">
+                <span className="text-[10px] max-w-full font-bold leading-none">
                   {item.label.split(' ')[0]}
                 </span>
               </button>
