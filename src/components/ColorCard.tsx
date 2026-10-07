@@ -33,36 +33,68 @@ interface NumericSpecProps {
 }
 
 function NumericSpec({ label, value, max, disabled, inputRef, onChange, onSlide, onStep, onSelect }: NumericSpecProps) {
+  const [editing, setEditing] = useState(false);
+  const fallbackRef = useRef<HTMLInputElement | null>(null);
+  const textRef = inputRef ?? fallbackRef;
+  const rangeRef = useRef<HTMLInputElement | null>(null);
+  const numericValue = Math.max(0, Math.min(max, Number(value) || 0));
+  const startEditing = () => {
+    if (disabled) return;
+    setEditing(true);
+    textRef.current?.focus();
+    textRef.current?.select();
+  };
+
   return (
-    <div className="numeric-spec">
+    <div
+      className={`numeric-spec ${editing ? 'is-editing' : ''} ${disabled ? 'is-disabled' : ''}`}
+      style={{ '--spec-progress': `${numericValue / max * 100}%` } as React.CSSProperties}
+      title="Arraste para ajustar. Dois cliques ou Enter para digitar."
+    >
+      <span className="spec-fill" aria-hidden="true" />
       <input
-        ref={inputRef}
+        ref={textRef}
         type="text"
         inputMode="numeric"
         aria-label={label}
         value={value}
         placeholder={label.split(' ').pop()}
         disabled={disabled}
-        onFocus={onSelect}
+        tabIndex={editing ? 0 : -1}
+        aria-hidden={!editing}
+        onFocus={() => { setEditing(true); onSelect(); }}
+        onBlur={() => setEditing(false)}
         onChange={event => onChange(event.target.value)}
         onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === 'Escape') {
+            event.preventDefault();
+            setEditing(false);
+            rangeRef.current?.focus();
+          }
           if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
             event.preventDefault();
             onStep(event.key === 'ArrowUp' ? 1 : -1);
           }
         }}
-        className="spec-input"
+        className="spec-input spec-value"
       />
       <input
+        ref={rangeRef}
         type="range"
-        aria-label={`Slider ${label}`}
+        aria-label={label}
+        aria-hidden={editing}
+        tabIndex={editing ? -1 : 0}
         min={0}
         max={max}
         step={1}
-        value={Number(value) || 0}
+        value={numericValue}
         disabled={disabled}
         onFocus={onSelect}
         onChange={event => onSlide(event.target.value)}
+        onDoubleClick={startEditing}
+        onKeyDown={event => {
+          if (event.key === 'Enter') { event.preventDefault(); startEditing(); }
+        }}
         className="spec-slider"
       />
     </div>
@@ -432,7 +464,7 @@ export const ColorCard: React.FC<ColorCardProps> = ({
         </div>
       )}
 
-      {/* Existing numeric specifications keep typing and gain mouse sliders. */}
+      {/* The numeric fields themselves slide and fill; Enter or double-click keeps direct typing. */}
       <div className="color-specs" onClick={event => event.stopPropagation()}>
         <div className="spec-group">
           <label htmlFor={`hex-${color.id}`} className="spec-label">HEX</label>
