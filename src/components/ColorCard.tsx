@@ -434,14 +434,30 @@ export const ColorCard: React.FC<ColorCardProps> = ({
 
       {/* 2. TONAL LIGHTNESS SCALE WITH CURRENT COLOR ARROW POINTER */}
       {!color.isEmpty && (
-        <div className="relative w-full pt-2 pb-0.5" onClick={e => e.stopPropagation()}>
+        <div className="relative w-full mt-3 mb-2" onClick={e => e.stopPropagation()}>
+          <div className="grid grid-cols-9 gap-0.5 mb-2">
+            {tonalScale.map(item => (
+              <button
+                key={item.stop}
+                type="button"
+                aria-label={`Cor ${labelNumber}: luminosidade ${item.stop}%`}
+                aria-pressed={color.hsl.l === item.stop}
+                onClick={() => onUpdate(createColorFromHsl(color.id, { h: color.hsl.h, s: color.hsl.s, l: item.stop }, false))}
+                className={`h-6 min-w-0 rounded border text-[9px] font-mono font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 ${color.hsl.l === item.stop ? 'bg-neutral-700 border-neutral-700 text-white dark:bg-neutral-400 dark:border-neutral-400 dark:text-neutral-950' : 'bg-neutral-100 border-neutral-200 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700'}`}
+                title={`Aplicar luminosidade ${item.stop}%`}
+              >
+                {item.stop}%
+              </button>
+            ))}
+          </div>
+          <div className="relative pt-2">
           {/* Arrow pointing down directly to original/current color's lightness position */}
           <div
             className="absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-150 z-10"
             style={{ left: `${Math.max(4, Math.min(96, color.hsl.l))}%` }}
             title={`Posição da cor original no espectro escuro-claro: ${color.hsl.l}%`}
           >
-            <svg width="8" height="6" viewBox="0 0 8 6" fill="none" className="text-blue-600 dark:text-blue-400 filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+            <svg width="8" height="6" viewBox="0 0 8 6" fill="none" className="text-neutral-600 dark:text-neutral-300 filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
               <path d="M4 6L0.5 0.5H7.5L4 6Z" fill="currentColor" />
             </svg>
           </div>
@@ -449,17 +465,20 @@ export const ColorCard: React.FC<ColorCardProps> = ({
           {/* Dark-to-Light Degrade Strip */}
           <div className="flex items-center gap-0.5 h-2 rounded-sm overflow-hidden w-full bg-neutral-200 dark:bg-neutral-800 p-0.2 border border-black/10 dark:border-white/10">
             {tonalScale.map(item => (
-              <div
+              <button
+                type="button"
+                aria-label={`Aplicar luminosidade ${item.stop}% à cor ${labelNumber}`}
                 key={item.stop}
                 onClick={e => {
                   e.stopPropagation();
                   onUpdate(createColorFromHsl(color.id, { h: color.hsl.h, s: color.hsl.s, l: item.stop }, false));
                 }}
-                className="flex-1 h-full rounded-2xs hover:scale-125 transition-transform cursor-pointer"
+                className="flex-1 h-full rounded-2xs hover:scale-125 transition-transform cursor-pointer focus-visible:outline-2 focus-visible:outline-neutral-400"
                 style={{ backgroundColor: item.hex, ...visionFilterStyle }}
                 title={`Aplicar luminosidade ${item.stop}% (${item.hex})`}
               />
             ))}
+          </div>
           </div>
         </div>
       )}

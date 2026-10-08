@@ -25,6 +25,7 @@ import { ColorCard } from './components/ColorCard';
 import { PalettePreview } from './components/PalettePreview';
 import { FullStripPreviewModal } from './components/FullStripPreviewModal';
 import { VisionFilterSvg } from './components/VisionFilterSvg';
+import { VisionWheelIcon } from './components/VisionWheelIcon';
 import { Plus, Eye } from 'lucide-react';
 
 export default function App() {
@@ -200,14 +201,16 @@ export default function App() {
               return (
                 <button
                   key={tab.id}
+                  aria-pressed={isSelected}
                   onClick={() => setVisionMode(tab.id as VisionMode)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-blue-600 text-white border-2 border-blue-700 shadow-sm dark:bg-blue-600 dark:border-blue-400 font-extrabold'
                       : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-950 border-2 border-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-750 dark:text-white dark:border-neutral-700'
                   }`}
                 >
-                  {tab.label}
+                  <VisionWheelIcon mode={tab.id as VisionMode} />
+                  <span>{tab.label}</span>
                 </button>
               );
             })}

@@ -47,8 +47,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [dragTarget, setDragTarget] = useState<DragTarget>(null);
-  const [dragCardId, setDragCardId] = useState<number | null>(null);
+  const gestureRef = useRef<{ pointerId: number; x: number; y: number; target: DragTarget; cardId: number; dragging: boolean } | null>(null);
   const [dragOverWheel, setDragOverWheel] = useState(false);
 
   // Active color item
@@ -324,6 +323,8 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
   // Interactive Drag & Pointer Handlers
   // --------------------------------------------------------------------------
   const updateFromPointer = (clientX: number, clientY: number, target: DragTarget) => {
+    const selectedId = gestureRef.current?.cardId ?? activeId;
+    const selectedHsv = colors.find(color => color.id === selectedId)?.hsv ?? activeHsv;
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -340,7 +341,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
         const newHue = Math.round(angleDeg);
 
         if (harmony !== 'free' && onBatchColorsChange) {
-          const delta = newHue - activeHsv.h;
+          const delta = newHue - selectedHsv.h;
           const updatedBatch = colors.map(c => {
             if (c.isEmpty) return c;
             const updatedH = ((c.hsv.h + delta) % 360 + 360) % 360;
@@ -348,7 +349,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           });
           onBatchColorsChange(updatedBatch);
         } else {
-          onColorChange(createColorFromHsv(activeId, { ...activeHsv, h: newHue }, false));
+          onColorChange(createColorFromHsv(selectedId, { ...selectedHsv, h: newHue }, false));
         }
       } else if (target === 'triangle') {
         // Calculate barycentric coords
@@ -382,8 +383,8 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
 
         onColorChange(
           createColorFromHsv(
-            activeId,
-            { h: activeHsv.h, s: Math.max(0, Math.min(100, newS)), v: Math.max(0, Math.min(100, newV)) },
+            selectedId,
+            { h: selectedHsv.h, s: Math.max(0, Math.min(100, newS)), v: Math.max(0, Math.min(100, newV)) },
             false
           )
         );
@@ -395,7 +396,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
         const newHue = Math.round(angleDeg);
 
         if (harmony !== 'free' && onBatchColorsChange) {
-          const delta = newHue - activeHsv.h;
+          const delta = newHue - selectedHsv.h;
           const updatedBatch = colors.map(c => {
             if (c.isEmpty) return c;
             const updatedH = ((c.hsv.h + delta) % 360 + 360) % 360;
@@ -403,7 +404,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           });
           onBatchColorsChange(updatedBatch);
         } else {
-          onColorChange(createColorFromHsv(activeId, { ...activeHsv, h: newHue }, false));
+          onColorChange(createColorFromHsv(selectedId, { ...selectedHsv, h: newHue }, false));
         }
       } else if (target === 'square') {
         const sqW = sqBounds.x1 - sqBounds.x0;
@@ -411,7 +412,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
         const newS = Math.round(Math.max(0, Math.min(100, ((px - sqBounds.x0) / sqW) * 100)));
         const newV = Math.round(Math.max(0, Math.min(100, (1 - (py - sqBounds.y0) / sqH) * 100)));
 
-        onColorChange(createColorFromHsv(activeId, { h: activeHsv.h, s: newS, v: newV }, false));
+        onColorChange(createColorFromHsv(selectedId, { h: selectedHsv.h, s: newS, v: newV }, false));
       }
     } else {
       // Classical radial wheel
@@ -420,17 +421,17 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
       const wheelR = radius - 16;
       const sat = Math.min(100, Math.round((dist / wheelR) * 100));
 
-      onColorChange(createColorFromHsv(activeId, { h: Math.round(angleDeg), s: sat, v: activeHsv.v }, false));
+      onColorChange(createColorFromHsv(selectedId, { h: Math.round(angleDeg), s: sat, v: selectedHsv.v }, false));
     }
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLElement | SVGElement>, cardId?: number) => {
     e.preventDefault();
-    (e.target as HTMLElement | SVGElement).setPointerCapture?.(e.pointerId);
+    if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
 
     if (cardId !== undefined) {
       onSelectCard(cardId);
-      setDragCardId(cardId);
     }
 
     const container = containerRef.current;
@@ -453,26 +454,22 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
       determinedTarget = 'circle';
     }
 
-    setDragTarget(determinedTarget);
-    if (cardId === undefined) updateFromPointer(e.clientX, e.clientY, determinedTarget);
+    gestureRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, target: determinedTarget, cardId: cardId ?? activeId, dragging: false };
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLElement | SVGElement>) => {
-    if (!dragTarget) return;
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== e.pointerId) return;
+    if (!gesture.dragging && Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y) < 4) return;
+    gesture.dragging = true;
     e.preventDefault();
-    updateFromPointer(e.clientX, e.clientY, dragTarget);
+    updateFromPointer(e.clientX, e.clientY, gesture.target);
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLElement | SVGElement>) => {
-    if (dragTarget) {
-      try {
-        (e.target as HTMLElement | SVGElement).releasePointerCapture?.(e.pointerId);
-      } catch {
-        // Ignore
-      }
-      setDragTarget(null);
-      setDragCardId(null);
-    }
+    if (gestureRef.current?.pointerId !== e.pointerId) return;
+    gestureRef.current = null;
+    if ((e.target as Element).hasPointerCapture?.(e.pointerId)) (e.target as Element).releasePointerCapture(e.pointerId);
   };
 
   // --------------------------------------------------------------------------
