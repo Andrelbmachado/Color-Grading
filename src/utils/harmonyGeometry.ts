@@ -20,8 +20,9 @@ export function harmonyPath(
     return primary.map(color => `M ${point(center)} L ${point(position(color))}`).join(' ');
   }
   if (harmony === 'monochromatic') {
-    if (ring) return `M ${point(center)} L ${point(position(primary[0]))}`;
-    primary = [...primary].sort((a, b) => a.hsv.s - b.hsv.s);
+    // The monochromatic guide is a fixed hue axis, independent of marker selection or saturation.
+    const axisColor = { ...primary[0], hsv: { ...primary[0].hsv, s: 100 } };
+    return `M ${point(center)} L ${point(position(axisColor))}`;
   } else {
     primary = [...primary].sort((a, b) => a.hsv.h - b.hsv.h);
   }

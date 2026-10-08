@@ -63,13 +63,13 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="w-full bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-3 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xs">
       {/* Brand Wordmark & Tri-Color Circles */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
-          <span className="absolute -top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-[#00E5FF] mix-blend-multiply dark:mix-blend-screen opacity-90" />
-          <span className="absolute -top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-[#FFDE00] mix-blend-multiply dark:mix-blend-screen opacity-90" />
-          <span className="absolute bottom-0 w-4 h-4 rounded-full bg-[#FF4F81] mix-blend-multiply dark:mix-blend-screen opacity-90" />
-        </div>
-        <span className="text-base sm:text-lg font-bold tracking-tight text-neutral-900 dark:text-white">
+      <div className="flex items-center gap-1.5 sm:gap-3">
+        <svg viewBox="0 0 36 32" className="w-7 h-7 sm:w-9 sm:h-9 shrink-0" aria-hidden="true">
+          <circle cx="11" cy="10" r="8" fill="#00E5FF" />
+          <circle cx="25" cy="10" r="8" fill="#FFDE00" />
+          <circle cx="18" cy="22.1" r="8" fill="#FF4F81" />
+        </svg>
+        <span className="text-sm sm:text-xl font-bold tracking-[-0.045em] leading-none text-neutral-900 dark:text-white whitespace-nowrap">
           Color Grading
         </span>
       </div>

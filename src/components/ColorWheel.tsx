@@ -1,9 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { ColorItem, HarmonyType, HSV, HSL, WheelShape, VisionMode } from '../types';
 import {
-  Circle,
-  Square,
-  Triangle,
   UploadCloud,
 } from 'lucide-react';
 import {
@@ -15,6 +12,7 @@ import {
 } from '../utils/colorConversions';
 
 import { harmonyPath } from '../utils/harmonyGeometry';
+import { WheelShapeIcon } from './WheelShapeIcon';
 
 interface ColorWheelProps {
   colors: ColorItem[];
@@ -325,6 +323,11 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
   const updateFromPointer = (clientX: number, clientY: number, target: DragTarget) => {
     const selectedId = gestureRef.current?.cardId ?? activeId;
     const selectedHsv = colors.find(color => color.id === selectedId)?.hsv ?? activeHsv;
+    const applyWheelColor = (updated: ColorItem) => {
+      if (harmony === 'monochromatic' && onBatchColorsChange) {
+        onBatchColorsChange(colors.map(color => color.id === selectedId ? updated : color));
+      } else onColorChange(updated);
+    };
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -336,6 +339,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
 
     if (wheelShape === 'triangle') {
       if (target === 'ring') {
+        if (harmony === 'monochromatic') return;
         let angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
         if (angleDeg < 0) angleDeg += 360;
         const newHue = Math.round(angleDeg);
@@ -349,7 +353,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           });
           onBatchColorsChange(updatedBatch);
         } else {
-          onColorChange(createColorFromHsv(selectedId, { ...selectedHsv, h: newHue }, false));
+          applyWheelColor(createColorFromHsv(selectedId, { ...selectedHsv, h: newHue }, false));
         }
       } else if (target === 'triangle') {
         // Calculate barycentric coords
@@ -381,7 +385,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
         const newV = Math.round((1 - wBr) * 100);
         const newS = newV > 0 ? Math.round((wTop / (wTop + wBl)) * 100) : 0;
 
-        onColorChange(
+        applyWheelColor(
           createColorFromHsv(
             selectedId,
             { h: selectedHsv.h, s: Math.max(0, Math.min(100, newS)), v: Math.max(0, Math.min(100, newV)) },
@@ -391,6 +395,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
       }
     } else if (wheelShape === 'square') {
       if (target === 'ring') {
+        if (harmony === 'monochromatic') return;
         let angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
         if (angleDeg < 0) angleDeg += 360;
         const newHue = Math.round(angleDeg);
@@ -404,7 +409,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           });
           onBatchColorsChange(updatedBatch);
         } else {
-          onColorChange(createColorFromHsv(selectedId, { ...selectedHsv, h: newHue }, false));
+          applyWheelColor(createColorFromHsv(selectedId, { ...selectedHsv, h: newHue }, false));
         }
       } else if (target === 'square') {
         const sqW = sqBounds.x1 - sqBounds.x0;
@@ -412,7 +417,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
         const newS = Math.round(Math.max(0, Math.min(100, ((px - sqBounds.x0) / sqW) * 100)));
         const newV = Math.round(Math.max(0, Math.min(100, (1 - (py - sqBounds.y0) / sqH) * 100)));
 
-        onColorChange(createColorFromHsv(selectedId, { h: selectedHsv.h, s: newS, v: newV }, false));
+        applyWheelColor(createColorFromHsv(selectedId, { h: selectedHsv.h, s: newS, v: newV }, false));
       }
     } else {
       // Classical radial wheel
@@ -421,7 +426,12 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
       const wheelR = radius - 16;
       const sat = Math.min(100, Math.round((dist / wheelR) * 100));
 
-      onColorChange(createColorFromHsv(selectedId, { h: Math.round(angleDeg), s: sat, v: selectedHsv.v }, false));
+      if (harmony === 'monochromatic') {
+        const hue = colors.find(color => !color.isEmpty)?.hsv.h ?? selectedHsv.h;
+        const angle = hue * Math.PI / 180;
+        const projectedS = Math.max(0, Math.min(100, Math.round((dx * Math.cos(angle) + dy * Math.sin(angle)) / wheelR * 100)));
+        applyWheelColor(createColorFromHsv(selectedId, { h: hue, s: projectedS, v: selectedHsv.v }, false));
+      } else applyWheelColor(createColorFromHsv(selectedId, { h: Math.round(angleDeg), s: sat, v: selectedHsv.v }, false));
     }
   };
 
@@ -548,11 +558,10 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
       {/* Format choices; the radial circle remains the initial selection. */}
       <div className="w-full grid grid-cols-3 gap-3 mb-4 px-0.5">
         {[
-          { id: 'triangle', label: 'Triângulo', icon: Triangle },
-          { id: 'square', label: 'Quadrado', icon: Square },
-          { id: 'circle', label: 'Círculo', icon: Circle },
+          { id: 'triangle', label: 'Triângulo' },
+          { id: 'square', label: 'Quadrado' },
+          { id: 'circle', label: 'Círculo' },
         ].map(item => {
-          const Icon = item.icon;
           const isSelected = wheelShape === item.id;
           return (
             <button
@@ -566,7 +575,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                   : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-950 border-2 border-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-white dark:border-neutral-700'
               }`}
             >
-              <Icon className="w-4 h-4 shrink-0" />
+              <WheelShapeIcon shape={item.id as WheelShape} />
               <span className="truncate">{item.label}</span>
             </button>
           );
@@ -637,6 +646,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                       handlePointerDown(e, color.id);
                     }}
                   >
+                    <circle cx={x} cy={y} r={20} fill="transparent" />
                     {isActive ? (
                       <circle
                         cx={x}
@@ -658,7 +668,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                         fill="#FFFFFF"
                         stroke="#000000"
                         strokeWidth="1.5"
-                        className="filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)] hover:scale-125 transition-transform"
+                        className="filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
                       />
                     )}
                   </g>
@@ -722,6 +732,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                       handlePointerDown(e, color.id);
                     }}
                   >
+                    <circle cx={x} cy={y} r={20} fill="transparent" />
                     {isActive && (
                       <circle
                         cx={x}
@@ -741,7 +752,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                       fill={color.hex}
                       stroke={isActive ? '#2563EB' : '#FFFFFF'}
                       strokeWidth="2.5"
-                      className="filter drop-shadow-[0_2px_5px_rgba(0,0,0,0.4)] hover:scale-110 transition-transform"
+                      className="filter drop-shadow-[0_2px_5px_rgba(0,0,0,0.4)]"
                     />
                   </g>
                 );
@@ -768,7 +779,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                 background:
                   'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
               }}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-600 focus:outline-none shadow-2xs border border-neutral-300 dark:border-neutral-600"
+              className="wheel-spec-slider"
             />
           </div>
           {/* Interactive Input with Arrow Stepping */}
@@ -782,9 +793,9 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                 if (e.key === 'ArrowUp') { e.preventDefault(); stepHInput(1); }
                 if (e.key === 'ArrowDown') { e.preventDefault(); stepHInput(-1); }
               }}
-              className="w-13 h-6 text-[10px] font-mono font-bold text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500"
+              className="wheel-spec-number"
             />
-            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 absolute right-1 pointer-events-none">°</span>
+            <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 absolute right-2 pointer-events-none">°</span>
           </div>
         </div>
 
@@ -802,7 +813,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
               style={{
                 background: `linear-gradient(to right, hsl(${activeHsl.h}, 0%, ${activeHsl.l}%), hsl(${activeHsl.h}, 100%, ${activeHsl.l}%))`,
               }}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-600 focus:outline-none shadow-2xs border border-neutral-300 dark:border-neutral-600"
+              className="wheel-spec-slider"
             />
           </div>
           {/* Interactive Input with Arrow Stepping */}
@@ -816,9 +827,9 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                 if (e.key === 'ArrowUp') { e.preventDefault(); stepSInput(1); }
                 if (e.key === 'ArrowDown') { e.preventDefault(); stepSInput(-1); }
               }}
-              className="w-13 h-6 text-[10px] font-mono font-bold text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500"
+              className="wheel-spec-number"
             />
-            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 absolute right-1 pointer-events-none">%</span>
+            <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 absolute right-2 pointer-events-none">%</span>
           </div>
         </div>
 
@@ -836,7 +847,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
               style={{
                 background: `linear-gradient(to right, #000000 0%, hsl(${activeHsl.h}, ${activeHsl.s}%, 50%) 50%, #ffffff 100%)`,
               }}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-600 focus:outline-none shadow-2xs border border-neutral-300 dark:border-neutral-600"
+              className="wheel-spec-slider"
             />
           </div>
           {/* Interactive Input with Arrow Stepping */}
@@ -850,9 +861,9 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
                 if (e.key === 'ArrowUp') { e.preventDefault(); stepLInput(1); }
                 if (e.key === 'ArrowDown') { e.preventDefault(); stepLInput(-1); }
               }}
-              className="w-13 h-6 text-[10px] font-mono font-bold text-center rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500"
+              className="wheel-spec-number"
             />
-            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 absolute right-1 pointer-events-none">%</span>
+            <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 absolute right-2 pointer-events-none">%</span>
           </div>
         </div>
       </div>
